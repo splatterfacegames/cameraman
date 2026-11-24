@@ -115,6 +115,16 @@ Every public class is registered with Godot's class database and documented in
 its source file. Browse the implementation by area under
 [`addons/cameraman`](addons/cameraman).
 
+### Physics engines
+
+The third-person follow's obstacle avoidance, the deoccluder and the
+third-person aim query the 3D physics engine. They give the same result under
+GodotPhysics3D, Jolt Physics and Box3D Physics, and they collide with bodies
+that have no node, such as a streamed world's collision created directly on
+`PhysicsServer3D`. Such bodies cannot be in a group; exclude them with
+`excluded_rids` or a collision layer. [`docs/PHYSICS.md`](docs/PHYSICS.md) has
+the rules, the measured differences between engines and the query costs.
+
 ## Teleports and hard cuts
 
 Damped cameras should be told when a tracked target teleports so they do not
@@ -177,6 +187,13 @@ Import the project before running the test suite:
 godot --headless --import
 godot --headless -s addons/gut/gut_cmdln.gd -gexit
 gdlint addons/cameraman tests demo
+```
+
+To run the suite and the physics comparisons under each 3D physics engine, see
+[`docs/PHYSICS.md`](docs/PHYSICS.md):
+
+```console
+GODOT=/path/to/editor tests/physics_parity/run.sh gut
 ```
 
 The repository includes GUT runtime and editor regression tests, focused
