@@ -945,6 +945,10 @@ func test_storyboard_camera_space_binds_2d_output_viewport() -> void:
 	storyboard._process(0.1)
 	var layer: CanvasLayer = storyboard.get_output_views()[0].layer
 	assert_eq(layer.custom_viewport, subviewport)
+	# Unbind the layer before its viewport goes: a CanvasLayer keeps a raw pointer to its custom
+	# viewport and uses it when it leaves the tree, which crashed now and then once it was freed.
+	storyboard.render_mode = CameramanStoryboard.RenderMode.SCREEN_SPACE_OVERLAY
+	storyboard._process(0.1)
 	root.remove_child(subviewport)
 	subviewport.free()
 
