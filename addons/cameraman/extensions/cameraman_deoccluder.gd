@@ -36,6 +36,10 @@ enum Strategy { PULL_CAMERA_FORWARD, PRESERVE_CAMERA_HEIGHT, PRESERVE_CAMERA_DIS
 ## Maximum quality bonus awarded to a clear, well-framed shot.
 @export var max_quality_boost: float = 1.0
 
+## Bodies and areas skipped by the visibility ray, by RID. Use it for collision that has no node
+## to put in a group: a body created directly on PhysicsServer3D. Fill it at run time.
+var excluded_rids: Array[RID] = []
+
 var _occluded: bool = false
 
 func post_pipeline_stage_callback(
@@ -56,13 +60,17 @@ func post_pipeline_stage_callback(
 		end = start + (end - start).limit_length(distance_limit)
 	var query: PhysicsRayQueryParameters3D = PhysicsRayQueryParameters3D.create(start, end)
 	query.collision_mask = collide_against
-	query.exclude = [target]
-	var hit: Dictionary = world_camera.get_world_3d().direct_space_state.intersect_ray(query)
+	var exclusions: Array[RID] = []
+	# The target's own body never occludes it, also when the target is a marker inside the body.
+	CameramanPhysicsQueries.append_target_bodies(exclusions, target)
+	CameramanPhysicsQueries.append_rids(exclusions, excluded_rids)
+	# Ignored and transparent bodies are skipped, so a real occluder behind one is still found.
+	# A hit without a node (a body made on the physics server) is in no group: it occludes.
+	var hit: Dictionary = CameramanPhysicsQueries.intersect_ray_filtered(
+		world_camera.get_world_3d().direct_space_state, query, exclusions, _is_ignored
+	)
 	_occluded = false
 	if not hit.is_empty():
-		var collider: Object = hit.get("collider") as Object
-		if _is_ignored(collider):
-			return
 		_occluded = true
 		var ray: Vector3 = (end - start).normalized()
 		var corrected: Vector3 = (hit["position"] as Vector3) - ray * camera_radius
