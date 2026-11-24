@@ -149,6 +149,9 @@ GODOT=/path/to/editor tests/physics_parity/run.sh --out /tmp/parity gut
 GODOT=/path/to/editor tests/physics_parity/run.sh --out /tmp/parity --engines "Box3D Physics" streamed_world
 ```
 
+`box3d_repro` as a script name prints the first three differences of the table
+above in three lines, as a minimal reproduction for the engine.
+
 `run.sh` makes one scratch project per engine under `--out`, differing only in
 `physics/3d/physics_engine`, runs the scripts in each and writes
 `parity_1mm.md`, `parity_2cm.md`, `paths.md` and `cost.md`. `--engines` takes
