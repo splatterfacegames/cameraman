@@ -31,6 +31,10 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 - `CameramanDeoccluder` excludes the collision object its target belongs to,
   also when the target is a marker inside that body, and every collision object
   below the target. Before, only a target that was itself the body was excluded.
+- A blocked third-person cast steps back 5 mm at a time while the camera's
+  sphere still overlaps the obstacle where the engine reported it safe. Measured
+  effect outside Box3D: up to 3.4 mm against a wall of triangles under Jolt and
+  GodotPhysics.
 - `CameramanThirdPersonFollow` reuses one sphere shape for its casts.
 
 ### Fixed

@@ -82,6 +82,11 @@ Areas are ignored, collision layers and masks are applied, exclusion by RID
 works and the `shape` index of a many-shape body is reported, identically on
 all three.
 
+Stepping back from an overlapping "safe" position is not limited to Box3D: where
+Jolt or GodotPhysics report an overlap at their own safe position, which they
+do against a wall of triangles, the camera stops up to 3.4 mm earlier than it
+did before this rule existed.
+
 The first three rows had made the camera behave differently under Box3D: a
 deoccluder whose target was a marker inside the character's capsule sat on the
 target (the ray hit the capsule it started in), and a rig whose arm started
