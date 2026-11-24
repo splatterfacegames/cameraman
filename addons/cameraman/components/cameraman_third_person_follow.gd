@@ -18,6 +18,7 @@ extends CameramanComponent
 @export var avoid_obstacles: CameramanObstacleAvoidance
 
 var _collision_distance: float = -1.0
+var _cast_sphere: SphereShape3D
 
 func _init() -> void:
 	avoid_obstacles = CameramanObstacleAvoidance.new()
@@ -133,9 +134,7 @@ func _cast_camera_path(
 	if avoid_obstacles.camera_radius <= 0.0:
 		hand_fraction = _cast_ray_fraction(world_node, root, hand, exclusions)
 	else:
-		var sphere: SphereShape3D = SphereShape3D.new()
-		sphere.radius = avoid_obstacles.camera_radius
-		hand_fraction = _cast_shape(world_node, sphere, root, hand, exclusions)
+		hand_fraction = _cast_shape(world_node, _get_cast_sphere(), root, hand, exclusions)
 	if hand_fraction <= 0.0:
 		var minimum_end: Vector3 = root + rotation * Vector3(0.0, 0.0, minimum_distance)
 		var minimum_fraction: float
@@ -144,10 +143,8 @@ func _cast_camera_path(
 				world_node, root, minimum_end, exclusions
 			)
 		else:
-			var minimum_sphere: SphereShape3D = SphereShape3D.new()
-			minimum_sphere.radius = avoid_obstacles.camera_radius
 			minimum_fraction = _cast_shape(
-				world_node, minimum_sphere, root, minimum_end, exclusions
+				world_node, _get_cast_sphere(), root, minimum_end, exclusions
 			)
 		return {"hand": root, "distance": maxf(minimum_distance * minimum_fraction, 0.05)}
 	var effective_hand: Vector3 = (
@@ -160,12 +157,18 @@ func _cast_camera_path(
 	if avoid_obstacles.camera_radius <= 0.0:
 		end_fraction = _cast_ray_fraction(world_node, effective_hand, end, exclusions)
 	else:
-		var end_sphere: SphereShape3D = SphereShape3D.new()
-		end_sphere.radius = avoid_obstacles.camera_radius
-		end_fraction = _cast_shape(world_node, end_sphere, effective_hand, end, exclusions)
+		end_fraction = _cast_shape(world_node, _get_cast_sphere(), effective_hand, end, exclusions)
 	var safe: float = distance * end_fraction
 	var result: float = safe if end_fraction < 1.0 else maxf(safe, minimum_distance)
 	return {"hand": effective_hand, "distance": maxf(result, 0.05)}
+
+## One sphere shape for every cast, rather than a new one (a new physics server shape) per cast.
+func _get_cast_sphere() -> SphereShape3D:
+	if _cast_sphere == null:
+		_cast_sphere = SphereShape3D.new()
+	if not is_equal_approx(_cast_sphere.radius, avoid_obstacles.camera_radius):
+		_cast_sphere.radius = avoid_obstacles.camera_radius
+	return _cast_sphere
 
 func _cast_ray_fraction(
 	world_node: Node3D,

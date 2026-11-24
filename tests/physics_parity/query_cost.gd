@@ -1,12 +1,13 @@
 extends SceneTree
 ## Times the physics queries of a rig with collision enabled, in microseconds per camera per frame,
 ## on the walks of behaviour_paths.gd. The cost of collision is the rig's update with collision
-## minus the same rig's update without it. Also times each raw query on its own.
+## minus the same rig's update without it. Each walk is repeated and the least disturbed repeat
+## is reported. Also times each raw query on its own.
 ##
 ## godot --headless --path <project> -s res://tests/physics_parity/query_cost.gd -- --out=<file>
 
 const ParityWorld: GDScript = preload("res://tests/physics_parity/parity_world.gd")
-const REPEATS: int = 5
+const REPEATS: int = 7
 const RAW_ITERATIONS: int = 20000
 
 func _initialize() -> void:
@@ -25,15 +26,17 @@ func _run() -> void:
 	}
 	await physics_frame
 	await physics_frame
-	var totals: Dictionary = {}
+	# For every rig and walk, the mean of each repeat; the least disturbed repeat is reported.
+	var best: Dictionary = {}
 	var worst: Dictionary = {}
 	var frames: int = 0
-	for rig_name in rigs:
-		totals[rig_name] = 0
-		worst[rig_name] = 0
 	for _repeat in REPEATS:
 		for path in ParityWorld.path_names():
-			for frame in ParityWorld.path_frames(path):
+			var totals: Dictionary = {}
+			for rig_name in rigs:
+				totals[rig_name] = 0
+			var path_frames: int = ParityWorld.path_frames(path)
+			for frame in path_frames:
 				target[0].global_transform = ParityWorld.path_transform(path, frame)
 				if frame % 8 == 0:
 					# Let the server see the moved target now and then; every frame would only time the wait.
@@ -45,13 +48,15 @@ func _run() -> void:
 					camera.update_state(Vector3.UP, ParityWorld.FRAME)
 					var spent: int = Time.get_ticks_usec() - before
 					totals[rig_name] += spent
-					worst[rig_name] = maxi(worst[rig_name], spent)
+					var key: String = "%s/%s" % [rig_name, path]
+					worst[key] = maxi(int(worst.get(key, 0)), spent)
+			for rig_name in rigs:
+				var key: String = "%s/%s" % [rig_name, path]
+				var mean: float = float(totals[rig_name]) / float(path_frames)
+				best[key] = minf(float(best.get(key, INF)), mean)
 	var per_frame: Dictionary = {}
-	for rig_name in rigs:
-		per_frame[rig_name] = {
-			"mean_usec": float(totals[rig_name]) / float(frames),
-			"worst_usec": worst[rig_name],
-		}
+	for key in best:
+		per_frame[key] = {"mean_usec": best[key], "worst_usec": worst[key]}
 	var document: Dictionary = {
 		"engine": String(ProjectSettings.get_setting("physics/3d/physics_engine", "DEFAULT")),
 		"frames": frames,

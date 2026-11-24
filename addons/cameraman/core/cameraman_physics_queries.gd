@@ -17,9 +17,9 @@ const MAX_SKIPPED_HITS: int = 32
 ## Most rounds of casting and excluding ignored bodies a single shape cast may take.
 const MAX_CAST_PASSES: int = 8
 ## Samples taken along a ray or cast to find where it leaves geometry it started inside.
-const EXIT_SAMPLES: int = 32
+const EXIT_SAMPLES: int = 16
 ## Halvings that refine that exit point after sampling.
-const EXIT_REFINEMENTS: int = 6
+const EXIT_REFINEMENTS: int = 5
 ## Metres a blocked shape cast steps back while the shape still overlaps the obstacle where the
 ## engine reported it safe (Box3D reports a rounded shape safe about 5 mm past contact), and the
 ## most steps it takes.
