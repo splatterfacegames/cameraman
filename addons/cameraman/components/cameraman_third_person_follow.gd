@@ -195,72 +195,21 @@ func _cast_shape(
 	end: Vector3,
 	exclusions: Array[RID]
 ) -> float:
-	var space: PhysicsDirectSpaceState3D = world_node.get_world_3d().direct_space_state
-	var filtered_exclusions: Array[RID] = exclusions.duplicate()
 	var query: PhysicsShapeQueryParameters3D = PhysicsShapeQueryParameters3D.new()
 	query.shape = shape
-	query.transform = Transform3D(Basis.IDENTITY, start)
 	query.collision_mask = avoid_obstacles.collision_mask
-	var motion: Vector3 = end - start
-	var last_safe: float = 0.0
-	for _index in 8:
-		query.transform = Transform3D(Basis.IDENTITY, start)
-		query.motion = motion
-		query.exclude = filtered_exclusions
-		var result: PackedFloat32Array = space.cast_motion(query)
-		if result.is_empty():
-			return last_safe
-		var safe: float = clampf(result[0], 0.0, 1.0)
-		var unsafe: float = clampf(result[1], safe, 1.0)
-		last_safe = safe
-		if safe >= 1.0:
-			return 1.0
-		var probe_fraction: float = clampf(unsafe + 0.01, 0.0, 1.0)
-		query.transform = Transform3D(Basis.IDENTITY, start + motion * probe_fraction)
-		query.motion = Vector3.ZERO
-		var hits: Array[Dictionary] = space.intersect_shape(query, 32)
-		if hits.is_empty():
-			return safe
-		var found_collider: bool = false
-		var all_ignored: bool = true
-		for hit in hits:
-			var collider: Object = hit.get("collider") as Object
-			if collider == null:
-				continue
-			found_collider = true
-			if not _is_ignored_group(collider):
-				all_ignored = false
-				break
-			_add_collision_exclusion(filtered_exclusions, collider)
-		if not found_collider:
-			return safe
-		if not all_ignored:
-			return safe
-	return 1.0
+	return CameramanPhysicsQueries.cast_shape_filtered(
+		world_node.get_world_3d().direct_space_state, query, start, end - start, exclusions, _is_ignored_group
+	)
 
 func _get_collision_exclusions() -> Array[RID]:
 	var result: Array[RID] = []
-	var target: Node3D = follow_target
-	if target != null:
-		var collision_target: CollisionObject3D = target as CollisionObject3D
-		var ancestor: Node = target.get_parent()
-		while collision_target == null and ancestor != null:
-			collision_target = ancestor as CollisionObject3D
-			ancestor = ancestor.get_parent()
-		if collision_target != null:
-			_add_collision_exclusion(result, collision_target)
-		_add_collision_descendants(target, result)
+	CameramanPhysicsQueries.append_target_bodies(result, follow_target)
 	if avoid_obstacles.ignore_group != &"" and is_inside_tree():
 		for node in get_tree().get_nodes_in_group(avoid_obstacles.ignore_group):
 			_add_collision_exclusion(result, node)
+	CameramanPhysicsQueries.append_rids(result, avoid_obstacles.excluded_rids)
 	return result
-
-func _add_collision_descendants(node: Node, exclusions: Array[RID]) -> void:
-	for child in node.get_children():
-		var collision: CollisionObject3D = child as CollisionObject3D
-		if collision != null:
-			_add_collision_exclusion(exclusions, collision)
-		_add_collision_descendants(child, exclusions)
 
 func _add_collision_exclusion(exclusions: Array[RID], collider: Object) -> void:
 	if collider is CollisionObject3D:
@@ -273,14 +222,7 @@ func _intersect_ray_ignoring_groups(
 	query: PhysicsRayQueryParameters3D,
 	exclusions: Array[RID]
 ) -> Dictionary:
-	var filtered_exclusions: Array[RID] = exclusions.duplicate()
-	for _index in 16:
-		query.exclude = filtered_exclusions
-		var hit: Dictionary = space.intersect_ray(query)
-		if hit.is_empty() or not _is_ignored_group(hit.get("collider") as Object):
-			return hit
-		_add_collision_exclusion(filtered_exclusions, hit.get("collider") as Object)
-	return {}
+	return CameramanPhysicsQueries.intersect_ray_filtered(space, query, exclusions, _is_ignored_group)
 
 func _is_ignored_group(collider: Object) -> bool:
 	if collider == null or not collider is Node:

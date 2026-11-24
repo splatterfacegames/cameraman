@@ -18,6 +18,11 @@ extends Resource
 ## Bodies in this group are skipped and do not shorten the camera path.
 @export var ignore_group: StringName
 
+## Bodies and areas skipped by obstacle casts, by RID. Use it for collision that has no node to
+## put in `ignore_group`: a body created directly on PhysicsServer3D. Not saved with the resource;
+## fill it at run time.
+var excluded_rids: Array[RID] = []
+
 func _set(property: StringName, value: Variant) -> bool:
 	if property == &"ignore_tag_group_name":
 		ignore_group = value
